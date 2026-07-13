@@ -1,0 +1,52 @@
+# Default values for the webapp chart.
+
+image:
+  repository: serverless-poc/webapp
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# --- Redis connection ------------------------------------------------
+# This webapp chart and the queueworker-operator chart are two
+# independently-installable Helm charts by design (see the top-level
+# README's "cross-chart coupling" note). `redis.stream` here MUST match
+# the corresponding entry in the operator chart's
+# `queueWorkers[].redis.stream` value (default: "welcome-email-queue") —
+# it is not auto-synced between the two charts.
+redis:
+  # In-cluster address of the Redis instance the operator chart bundles by
+  # default: "<operator-release-name>-redis-master:6379". Override if the
+  # operator chart was installed under a different release name, or if
+  # pointing at an external/managed Redis instance.
+  address: "operator-redis-master:6379"
+  stream: welcome-email-queue
+
+# --- OpenTelemetry ---------------------------------------------------
+# OTLP/HTTP endpoint custom metrics are pushed to (see lib/telemetry.ts).
+# The default matches the monitoring chart installed as release
+# "monitoring" in the "monitoring" namespace. Set to "" to disable the
+# export loop's target (exports will fail quietly; the app is unaffected).
+otel:
+  exporterEndpoint: "http://monitoring-opentelemetry-collector.monitoring.svc.cluster.local:4318"
+  serviceName: webapp
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: webapp.local
+  path: /
+  tls: []

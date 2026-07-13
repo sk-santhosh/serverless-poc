@@ -1,0 +1,14 @@
+# The grafana_dashboard label is what kube-prometheus-stack's Grafana
+# sidecar watches for: any ConfigMap carrying it (in Grafana's namespace)
+# is auto-provisioned as a dashboard, no Grafana UI import step needed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-serverless-poc-dashboard
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  serverless-poc.json: |-
+{{ .Files.Get "dashboards/serverless-poc.json" | indent 4 }}

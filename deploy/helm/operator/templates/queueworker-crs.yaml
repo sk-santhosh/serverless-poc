@@ -1,0 +1,38 @@
+{{/*
+One QueueWorker CR per entry in .Values.queueWorkers. This is the only
+mechanism needed to add a new, fully independent queue+worker pipeline:
+edit values.yaml and `helm upgrade` — no template or operator code changes.
+*/}}
+{{- range .Values.queueWorkers }}
+apiVersion: serverless-poc.sk-santhosh.io/v1alpha1
+kind: QueueWorker
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "queueworker-operator.labels" $ | nindent 4 }}
+spec:
+  redis:
+    address: {{ if .redis.address }}{{ .redis.address | quote }}{{ else }}{{ include "queueworker-operator.bundledRedisAddress" $ | quote }}{{ end }}
+    stream: {{ .redis.stream | quote }}
+    consumerGroup: {{ .redis.consumerGroup | quote }}
+  maxConcurrency: {{ .maxConcurrency }}
+  pollInterval: {{ .pollInterval | quote }}
+  worker:
+    image: {{ .worker.image | quote }}
+    {{- if or .worker.envFromSecret $.Values.otel.exporterEndpoint }}
+    envFrom:
+      {{- if .worker.envFromSecret }}
+      - secretRef:
+          name: {{ .worker.envFromSecret }}
+      {{- end }}
+      {{- if $.Values.otel.exporterEndpoint }}
+      - configMapRef:
+          name: {{ .name }}-worker-otel-env
+      {{- end }}
+    {{- end }}
+    {{- if .worker.resources }}
+    resources:
+      {{- toYaml .worker.resources | nindent 6 }}
+    {{- end }}
+---
+{{- end }}

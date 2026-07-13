@@ -1,0 +1,30 @@
+# --- Node / Next.js (webapp, worker) ---
+node_modules/
+.next/
+out/
+dist/
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# --- Go (operator) ---
+operator/bin/
+*.o
+*.a
+*.exe
+
+# --- Helm ---
+deploy/helm/*/charts/*.tgz
+# NOTE: Chart.lock IS committed intentionally for reproducible `helm dependency update`.
+# Real secrets must never be committed:
+deploy/helm/*/values-secrets.yaml
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- git ---
+*.orig

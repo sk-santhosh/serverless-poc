@@ -1,0 +1,14 @@
+apiVersion: v2
+name: webapp
+description: >-
+  Next.js form + API that enqueues welcome-email requests onto a Redis
+  Stream for the QueueWorker operator to drain. Installs independently of
+  the queueworker-operator chart.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/sk-santhosh/serverless-poc
+keywords:
+  - nextjs
+  - serverless
+  - redis

@@ -1,0 +1,27 @@
+apiVersion: v2
+name: queueworker-operator
+description: >-
+  Generic queue-driven, pod-per-message serverless operator for Kubernetes.
+  Watches QueueWorker custom resources and scales single-shot Jobs to Redis
+  Stream depth. Not tied to any specific queue or worker image — designed to
+  be declared as a `dependencies:` entry in other charts.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/sk-santhosh/serverless-poc
+keywords:
+  - operator
+  - kubernetes
+  - serverless
+  - redis
+  - queue
+
+# Redis is bundled as an actual chart dependency (not just documented as a
+# prerequisite) so this chart is self-sufficient for local/POC use.
+# Toggle off via `redis.enabled: false` in values.yaml to point
+# queueWorkers[].redis.address at an external/managed Redis instead.
+dependencies:
+  - name: redis
+    version: "23.x.x"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: redis.enabled

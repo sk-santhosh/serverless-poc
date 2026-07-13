@@ -1,0 +1,20 @@
+# Scrapes the OTel Collector's prometheus-exporter port (8889), where the
+# OTLP metrics pushed by the webapp and worker Jobs are re-exposed.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-otel-collector-metrics
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentelemetry-collector
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: prometheus
+      interval: 10s
+      # Keep the labels the exporter emits (service_name etc.) when they
+      # collide with scrape-time labels.
+      honorLabels: true

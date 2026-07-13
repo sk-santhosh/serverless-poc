@@ -1,0 +1,18 @@
+# Exposes controller-runtime's /metrics endpoint (built-in controller
+# metrics + the custom queueworker_* series registered in
+# internal/controller/metrics.go) so the monitoring chart's ServiceMonitor
+# can point Prometheus at it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "queueworker-operator.fullname" . }}-metrics
+  labels:
+    {{- include "queueworker-operator.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "queueworker-operator.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: metrics

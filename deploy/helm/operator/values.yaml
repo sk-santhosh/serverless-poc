@@ -1,0 +1,108 @@
+# Default values for the queueworker-operator chart.
+
+operator:
+  image:
+    repository: serverless-poc/operator
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  # Poll interval / concurrency etc. all live per-queueWorker below; nothing
+  # operator-wide to configure beyond image + resources.
+
+# --- Bundled Redis (Bitnami subchart) ---------------------------------
+# Set to false to point every queueWorkers[].redis.address below at an
+# external/managed Redis instance instead of the bundled one. When true,
+# the in-cluster address is "<release-name>-redis-master:6379" (Bitnami's
+# standard service name for a `standalone` architecture deployment).
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false # POC only: disable for kind/local; enable for anything durable.
+    resourcesPreset: "micro"
+
+# --- OpenTelemetry ---------------------------------------------------
+# OTLP/HTTP endpoint worker Jobs push their custom metrics to (injected
+# via a per-queue "<name>-worker-otel-env" ConfigMap). The default matches
+# the monitoring chart installed as release "monitoring" in the
+# "monitoring" namespace. Set to "" to skip the ConfigMap/env entirely.
+otel:
+  exporterEndpoint: "http://monitoring-opentelemetry-collector.monitoring.svc.cluster.local:4318"
+
+# --- SMTP credentials ----------------------------------------------------
+# Rendered into the `smtp-credentials` Secret referenced by queueWorkers[].
+# worker.envFromSecret below. NEVER put real credentials here or in any
+# tracked file — override with `--set smtp.xxx=...` or an untracked
+# `values-secrets.yaml` (gitignored) passed via `helm install -f`, e.g.:
+#
+#   helm install operator . -f values-secrets.yaml
+#
+# For local development, point these at a `maildev` container instead of
+# a real provider (see the top-level README) so no real emails ever send.
+smtp:
+  host: "maildev.default.svc.cluster.local"
+  port: 1025
+  user: ""
+  pass: ""
+  fromEmail: "welcome@example.com"
+
+# --- QueueWorker custom resources ---------------------------------------
+# One entry here becomes one QueueWorker CR (see templates/queueworker-crs.yaml).
+# Adding a new queue — a wholly independent pipeline with its own worker
+# image and concurrency limit — is purely a matter of appending another
+# entry to this list and running `helm upgrade`. No operator code or chart
+# template changes required.
+#
+# IMPORTANT cross-chart coupling: the `redis.stream` value below
+# (welcome-email-queue) must match the `deploy/helm/webapp` chart's
+# `redis.stream` value — see that chart's values.yaml and the top-level
+# README for details. These are two independently-installable charts by
+# design, so this is not auto-synced.
+queueWorkers:
+  - name: welcome-email
+    redis:
+      # Left unset here on purpose: templates/queueworker-crs.yaml fills in
+      # "<release-name>-redis-master:6379" automatically when redis.enabled
+      # is true. Set this explicitly to override (e.g. an external Redis).
+      address: ""
+      stream: welcome-email-queue
+      consumerGroup: welcome-email-workers
+    maxConcurrency: 5
+    pollInterval: 5s
+    worker:
+      image: serverless-poc/welcome-email-worker:latest
+      envFromSecret: smtp-credentials
+      resources:
+        requests:
+          cpu: 100m
+          memory: 64Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
+  # - name: some-other-queue
+  #   redis:
+  #     address: ""
+  #     stream: some-other-queue
+  #     consumerGroup: some-other-queue-workers
+  #   maxConcurrency: 3
+  #   pollInterval: 10s
+  #   worker:
+  #     image: myrepo/some-other-worker:latest
+  #     envFromSecret: some-other-credentials
+  #     resources:
+  #       requests:
+  #         cpu: 100m
+  #         memory: 64Mi
+  #       limits:
+  #         cpu: 250m
+  #         memory: 128Mi

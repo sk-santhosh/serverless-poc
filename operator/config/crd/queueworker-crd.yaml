@@ -1,0 +1,247 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: queueworkers.serverless-poc.sk-santhosh.io
+spec:
+  group: serverless-poc.sk-santhosh.io
+  names:
+    kind: QueueWorker
+    listKind: QueueWorkerList
+    plural: queueworkers
+    shortNames:
+    - qw
+    singular: queueworker
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.redis.stream
+      name: Queue
+      type: string
+    - jsonPath: .spec.maxConcurrency
+      name: MaxConcurrency
+      type: integer
+    - jsonPath: .status.activeWorkers
+      name: Active
+      type: integer
+    - jsonPath: .status.queueDepth
+      name: Depth
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          QueueWorker is the Schema for the queueworkers API.
+
+          A QueueWorker is intentionally generic: it points a Redis stream at a
+          worker container image and a concurrency limit. Nothing about it is
+          specific to sending email — the welcome-email behavior lives entirely in
+          the image referenced by spec.worker.image.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: QueueWorkerSpec defines the desired state of a QueueWorker.
+            properties:
+              maxConcurrency:
+                description: |-
+                  MaxConcurrency is the maximum number of worker Jobs that may run at
+                  once for this queue.
+                minimum: 1
+                type: integer
+              pollInterval:
+                description: |-
+                  PollInterval is how often the controller checks queue depth, as a
+                  Go duration string (e.g. "5s"). Parsed with time.ParseDuration.
+                pattern: ^[0-9]+(ms|s|m|h)$
+                type: string
+              redis:
+                description: Redis identifies the stream this QueueWorker watches.
+                properties:
+                  address:
+                    description: Address is host:port of the Redis instance, e.g.
+                      "redis-master.default.svc.cluster.local:6379".
+                    type: string
+                  consumerGroup:
+                    description: |-
+                      ConsumerGroup is the Redis consumer group used to coordinate delivery
+                      across worker Pods. Created automatically if it does not exist.
+                    type: string
+                  stream:
+                    description: Stream is the name of the Redis Stream to watch.
+                    type: string
+                required:
+                - address
+                - consumerGroup
+                - stream
+                type: object
+              worker:
+                description: Worker is the Job/Pod template used to process one queue
+                  item.
+                properties:
+                  envFrom:
+                    description: |-
+                      EnvFrom is injected into the worker container alongside the
+                      Redis connection env vars the operator adds automatically
+                      (REDIS_ADDRESS, REDIS_STREAM, REDIS_CONSUMER_GROUP).
+                    items:
+                      description: EnvFromSource represents the source of a set of
+                        ConfigMaps or Secrets
+                      properties:
+                        configMapRef:
+                          description: The ConfigMap to select from
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the ConfigMap must be defined
+                              type: boolean
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        prefix:
+                          description: |-
+                            Optional text to prepend to the name of each environment variable.
+                            May consist of any printable ASCII characters except '='.
+                          type: string
+                        secretRef:
+                          description: The Secret to select from
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                            optional:
+                              description: Specify whether the Secret must be defined
+                              type: boolean
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    type: array
+                  image:
+                    description: Image is the container image run once per queue item.
+                    type: string
+                  resources:
+                    description: |-
+                      Resources are the compute resource requirements for the worker
+                      container. Requests/limits are mandatory in this cluster's policy.
+                    properties:
+                      claims:
+                        description: |-
+                          Claims lists the names of resources, defined in spec.resourceClaims,
+                          that are used by this container.
+
+                          This field depends on the
+                          DynamicResourceAllocation feature gate.
+
+                          This field is immutable. It can only be set for containers.
+                        items:
+                          description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                          properties:
+                            name:
+                              description: |-
+                                Name must match the name of one entry in pod.spec.resourceClaims of
+                                the Pod where this field is used. It makes that resource available
+                                inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Limits describes the maximum amount of compute resources allowed.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: |-
+                          Requests describes the minimum amount of compute resources required.
+                          If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                          otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                          More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                        type: object
+                    type: object
+                required:
+                - image
+                type: object
+            required:
+            - maxConcurrency
+            - pollInterval
+            - redis
+            - worker
+            type: object
+          status:
+            description: QueueWorkerStatus defines the observed state of a QueueWorker.
+            properties:
+              activeWorkers:
+                description: |-
+                  ActiveWorkers is the number of non-completed Jobs currently owned by
+                  this QueueWorker.
+                type: integer
+              lastReconcileTime:
+                description: LastReconcileTime is the timestamp of the most recent
+                  reconcile loop.
+                format: date-time
+                type: string
+              queueDepth:
+                description: QueueDepth is the last-observed length of the Redis stream.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

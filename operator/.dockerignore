@@ -1,0 +1,9 @@
+node_modules
+bin
+.git
+.env
+.env.*
+Dockerfile
+.dockerignore
+config
+hack

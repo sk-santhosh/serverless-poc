@@ -1,0 +1,12 @@
+# REDIS_ADDRESS / REDIS_STREAM for this webapp instance. See the
+# "Redis connection" comment block in values.yaml re: keeping `redis.stream`
+# in sync with the operator chart's queueWorkers[].redis.stream.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webapp.fullname" . }}-redis-env
+  labels:
+    {{- include "webapp.labels" . | nindent 4 }}
+data:
+  REDIS_ADDRESS: {{ .Values.redis.address | quote }}
+  REDIS_STREAM: {{ .Values.redis.stream | quote }}

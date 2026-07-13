@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "queueworker-operator.fullname" . }}
+  labels:
+    {{- include "queueworker-operator.labels" . | nindent 4 }}
+---
+# Scoped to exactly what the reconcile loop touches: QueueWorker CRs (+ its
+# status subresource) and Jobs. Nothing broader — the operator never reads
+# or creates Pods directly (Jobs create their own Pods), and never touches
+# Secrets/ConfigMaps beyond what it passes through by reference.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "queueworker-operator.fullname" . }}
+  labels:
+    {{- include "queueworker-operator.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["serverless-poc.sk-santhosh.io"]
+    resources: ["queueworkers"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["serverless-poc.sk-santhosh.io"]
+    resources: ["queueworkers/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "queueworker-operator.fullname" . }}
+  labels:
+    {{- include "queueworker-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "queueworker-operator.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "queueworker-operator.fullname" . }}
+    namespace: {{ .Release.Namespace }}

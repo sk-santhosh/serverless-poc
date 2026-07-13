@@ -1,0 +1,18 @@
+apiVersion: v2
+name: monitoring
+description: >-
+  Observability stack for the serverless POC: Grafana + Prometheus via
+  kube-prometheus-stack, an OpenTelemetry Collector that receives OTLP
+  metrics pushed by the webapp and the (short-lived) worker Jobs, the
+  ServiceMonitors that point Prometheus at the collector and at the
+  operator's /metrics endpoint, and a provisioned custom dashboard.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: kube-prometheus-stack
+    version: 87.15.1
+    repository: https://prometheus-community.github.io/helm-charts
+  - name: opentelemetry-collector
+    version: 0.165.0
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts

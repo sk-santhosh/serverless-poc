@@ -1,0 +1,21 @@
+# Scrapes the queueworker-operator's controller-runtime /metrics endpoint
+# (exposed by the operator chart's "-metrics" Service in .Values.appNamespace)
+# for the custom queueworker_* gauges/counters plus the built-in
+# controller_runtime_* series.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-queueworker-operator
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.appNamespace }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: queueworker-operator
+  endpoints:
+    - port: metrics
+      interval: 10s

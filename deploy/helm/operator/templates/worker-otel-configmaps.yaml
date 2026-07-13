@@ -1,0 +1,20 @@
+{{/*
+One ConfigMap per QueueWorker, injected into its worker Jobs via envFrom
+(see queueworker-crs.yaml). Carries the OpenTelemetry export target for the
+worker's custom metrics — push-based OTLP, because worker pods live far
+shorter than any Prometheus scrape interval.
+*/}}
+{{- if .Values.otel.exporterEndpoint }}
+{{- range .Values.queueWorkers }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}-worker-otel-env
+  labels:
+    {{- include "queueworker-operator.labels" $ | nindent 4 }}
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ $.Values.otel.exporterEndpoint | quote }}
+  OTEL_SERVICE_NAME: {{ printf "%s-worker" .name | quote }}
+---
+{{- end }}
+{{- end }}

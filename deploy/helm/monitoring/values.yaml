@@ -1,0 +1,73 @@
+# Default values for the monitoring chart.
+#
+# Install as release "monitoring" in namespace "monitoring" (the Makefile's
+# `make monitoring` does exactly that). The OTLP endpoint defaults baked
+# into the webapp and operator charts assume those names:
+#   http://monitoring-opentelemetry-collector.monitoring.svc.cluster.local:4318
+
+# Namespace the webapp + operator charts are installed in; used by the
+# ServiceMonitor that scrapes the operator's metrics Service.
+appNamespace: default
+
+kube-prometheus-stack:
+  # POC-only: fixed Grafana admin credentials for local kind clusters.
+  grafana:
+    adminPassword: admin
+  prometheus:
+    prometheusSpec:
+      # Pick up every ServiceMonitor/PodMonitor in the cluster, not only
+      # the ones labeled with this Helm release — ours are rendered by
+      # this same chart, but this keeps the selection rule obvious.
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      retention: 24h
+  # No alert routing in a local POC.
+  alertmanager:
+    enabled: false
+
+opentelemetry-collector:
+  mode: deployment
+  replicaCount: 1
+  # The contrib distribution: the k8s-flavored image does not ship the
+  # prometheus exporter this pipeline hinges on.
+  image:
+    repository: otel/opentelemetry-collector-contrib
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  # Expose the prometheus-exporter port on the collector Service so the
+  # ServiceMonitor (templates/otel-collector-servicemonitor.yaml) can
+  # scrape it.
+  ports:
+    prometheus:
+      enabled: true
+      containerPort: 8889
+      servicePort: 8889
+      protocol: TCP
+  config:
+    # Drop the default receivers this pipeline doesn't use (null deletes
+    # the key from the chart's default config).
+    receivers:
+      jaeger: null
+      zipkin: null
+      prometheus: null
+    exporters:
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        # Promote OTel resource attributes (service.name et al.) to plain
+        # Prometheus labels so the dashboard can tell the three apps apart.
+        resource_to_telemetry_conversion:
+          enabled: true
+    service:
+      pipelines:
+        # Metrics only: apps push OTLP, Prometheus scrapes :8889.
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus]
+        traces: null
+        logs: null
