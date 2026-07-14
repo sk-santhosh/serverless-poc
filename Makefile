@@ -23,7 +23,7 @@ SMTP_SECRETS   := deploy/helm/operator/values-secrets.yaml
 HELM_SMTP_ARGS := $(if $(wildcard $(SMTP_SECRETS)),-f $(SMTP_SECRETS))
 
 .PHONY: up down cluster images load smtp-secrets deploy \
-        deploy-operator deploy-webapp monitoring grafana \
+        deploy-operator deploy-webapp monitoring grafana webapp \
         port-forward status clean
 
 up: cluster images load deploy monitoring status ## Everything, end to end
@@ -62,13 +62,23 @@ monitoring: ## Grafana + Prometheus + OTel collector (+ custom dashboard)
 	$(HELM) upgrade --install monitoring deploy/helm/monitoring \
 		--namespace monitoring --create-namespace --timeout 10m
 
-grafana: ## Grafana UI on http://localhost:3001 (admin / admin)
-	@echo "Grafana: http://localhost:3001  (login: admin / admin)"
-	$(KUBECTL) -n monitoring port-forward svc/monitoring-grafana 3001:80
+grafana: ## Grafana UI on http://localhost:4001 (admin / admin)
+	@echo "Grafana: http://localhost:4001  (login: admin / admin)"
+	$(KUBECTL) -n monitoring port-forward svc/monitoring-grafana 4001:80
 
-port-forward: ## Webapp on http://localhost:3000 (Ctrl-C to stop)
-	@echo "webapp: http://localhost:3000"
-	$(KUBECTL) port-forward svc/webapp 3000:3000
+webapp: ## Webapp on http://localhost:4000 (Ctrl-C to stop)
+	@echo "webapp: http://localhost:4000"
+	$(KUBECTL) port-forward svc/webapp 4000:3000
+
+# Not `port-forward: webapp grafana` — prerequisites run sequentially, and
+# the webapp target's foreground port-forward never exits, so grafana would
+# never start. Run both in one shell instead; Ctrl-C stops the pair.
+port-forward: ## Forward ports to the webapp and grafana
+	@echo "webapp:  http://localhost:4000"
+	@echo "Grafana: http://localhost:4001  (login: admin / admin)"
+	@$(KUBECTL) port-forward svc/webapp 4000:3000 & \
+	$(KUBECTL) -n monitoring port-forward svc/monitoring-grafana 4001:80 & \
+	wait
 
 status: ## Show nodes, releases, and workloads
 	$(KUBECTL) get nodes

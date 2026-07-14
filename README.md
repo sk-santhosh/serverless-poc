@@ -174,8 +174,8 @@ newly loaded image on their own.)
 | `make smtp-secrets` | Bootstrap the gitignored real-SMTP credentials file |
 | `make deploy` | Install/upgrade both Helm charts (operator first, with `values-secrets.yaml` if present) |
 | `make monitoring` | Install/upgrade the Grafana + Prometheus + OTel collector stack |
-| `make port-forward` | Webapp at http://localhost:3000 |
-| `make grafana` | Grafana at http://localhost:3001 (admin / admin) |
+| `make port-forward` | Webapp at http://localhost:4000 (and Grafana at :4001) |
+| `make grafana` | Grafana at http://localhost:4001 (admin / admin) |
 | `make status` | Show nodes, Helm releases, pods/jobs/queueworkers |
 | `make down` | Delete the kind cluster |
 | `make clean` | `down` + remove the locally built images |
@@ -191,7 +191,7 @@ versa for the operator's reconcile loop).
 make port-forward
 ```
 
-Open http://localhost:3000, submit a name + email.
+Open http://localhost:4000, submit a name + email.
 
 ### 4. Watch it scale to zero and back
 
@@ -240,7 +240,7 @@ as release `monitoring` in namespace `monitoring`. It bundles
 **kube-prometheus-stack** (Prometheus + Grafana) and an **OpenTelemetry
 Collector** as chart dependencies and provisions a custom dashboard
 ("Serverless POC — Welcome Email Pipeline", auto-loaded via the Grafana
-sidecar). Open it with `make grafana` → http://localhost:3001 (admin /
+sidecar). Open it with `make grafana` → http://localhost:4001 (admin /
 admin) → Dashboards.
 
 Custom metrics come from all three apps, over two paths:
