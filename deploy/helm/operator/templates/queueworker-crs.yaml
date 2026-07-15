@@ -19,6 +19,9 @@ spec:
   pollInterval: {{ .pollInterval | quote }}
   worker:
     image: {{ .worker.image | quote }}
+    {{- with (default $.Values.workerRuntimeClassName .worker.runtimeClassName) }}
+    runtimeClassName: {{ . | quote }}
+    {{- end }}
     {{- if or .worker.envFromSecret $.Values.otel.exporterEndpoint }}
     envFrom:
       {{- if .worker.envFromSecret }}

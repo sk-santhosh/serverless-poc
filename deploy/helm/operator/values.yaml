@@ -13,8 +13,18 @@ operator:
     limits:
       cpu: 250m
       memory: 128Mi
+  # RuntimeClass for the operator Pod. Set to "gvisor" (the RuntimeClass
+  # the minikube gvisor addon installs) to sandbox it with runsc; empty
+  # uses the cluster's default runtime. The Makefile sets this
+  # automatically for `PLATFORM=minikube`.
+  runtimeClassName: ""
   # Poll interval / concurrency etc. all live per-queueWorker below; nothing
   # operator-wide to configure beyond image + resources.
+
+# RuntimeClass applied to every queueWorkers[] entry's worker Job Pods
+# (individual entries can override with their own worker.runtimeClassName).
+# Same semantics as operator.runtimeClassName above.
+workerRuntimeClassName: ""
 
 # --- Bundled Redis (Bitnami subchart) ---------------------------------
 # Set to false to point every queueWorkers[].redis.address below at an

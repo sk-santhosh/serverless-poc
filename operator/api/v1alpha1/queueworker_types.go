@@ -35,6 +35,12 @@ type WorkerSpec struct {
 	// container. Requests/limits are mandatory in this cluster's policy.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// RuntimeClassName selects the RuntimeClass for worker Pods (e.g.
+	// "gvisor" to sandbox workers with runsc). Empty means the cluster's
+	// default runtime.
+	// +optional
+	RuntimeClassName string `json:"runtimeClassName,omitempty"`
 }
 
 // QueueWorkerSpec defines the desired state of a QueueWorker.

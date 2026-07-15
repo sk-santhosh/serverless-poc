@@ -15,6 +15,9 @@ spec:
         {{- include "queueworker-operator.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "queueworker-operator.fullname" . }}
+      {{- with .Values.operator.runtimeClassName }}
+      runtimeClassName: {{ . | quote }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         # gcr.io/distroless/static:nonroot's built-in numeric UID/GID.

@@ -118,12 +118,38 @@ reasonable choices were made rather than stopping to ask:
 `make`, `kind`, `kubectl`, `helm` (v3), `docker`, `go` (1.26+), `node` (20+).
 
 Everything below is driven by the top-level [`Makefile`](Makefile), which
-targets a 3-node kind cluster (1 control-plane + 2 workers) named
-`serverless-poc`, defined in
-[`deploy/kind/kind-config.yaml`](deploy/kind/kind-config.yaml). All
-`kubectl`/`helm` invocations inside it are pinned to the
-`kind-serverless-poc` context, so it never touches whatever your current
-kubeconfig context happens to be.
+supports two platforms via the `PLATFORM` variable (every target honors it):
+
+- **`PLATFORM=kind` (default)** — a 3-node kind cluster (1 control-plane +
+  2 workers) named `serverless-poc`, defined in
+  [`deploy/kind/kind-config.yaml`](deploy/kind/kind-config.yaml).
+- **`PLATFORM=minikube`** — minikube with the three apps sandboxed under
+  **gVisor** (`runtimeClassName: gvisor`, handler `runsc`). `make cluster
+  PLATFORM=minikube` starts minikube with `--container-runtime=containerd`
+  if it isn't running, and enables the `gvisor` addon if it isn't enabled
+  (pinning `registry.k8s.io/minikube/gvisor:v0.0.4` — the addon's default
+  image is missing from its registry). The gvisor RuntimeClass is applied
+  to the webapp Deployment, the operator Deployment, and every worker Job
+  (via the `runtimeClassName` values in both charts and the QueueWorker
+  CRD's `spec.worker.runtimeClassName` field); the bundled Redis and the
+  monitoring stack stay on the default runtime.
+
+  One access difference: `kubectl port-forward` cannot reach gVisor pods
+  (it dials the pod netns loopback, but a sandboxed pod's sockets live in
+  runsc's userspace netstack — traffic to the pod IP works, loopback does
+  not). On minikube the webapp Service is therefore a NodePort, and
+  `make webapp` / `make port-forward` open it via `minikube service
+  webapp --url`, which prints a dynamic `http://127.0.0.1:<port>` URL
+  instead of the fixed :4000.
+
+```bash
+make up                    # kind
+make up PLATFORM=minikube  # minikube + gVisor
+```
+
+All `kubectl`/`helm` invocations inside the Makefile are pinned to the
+platform's context (`kind-serverless-poc` or `minikube`), so it never
+touches whatever your current kubeconfig context happens to be.
 
 ### 1. Configure SMTP credentials
 
@@ -177,8 +203,11 @@ newly loaded image on their own.)
 | `make port-forward` | Webapp at http://localhost:4000 (and Grafana at :4001) |
 | `make grafana` | Grafana at http://localhost:4001 (admin / admin) |
 | `make status` | Show nodes, Helm releases, pods/jobs/queueworkers |
-| `make down` | Delete the kind cluster |
+| `make gvisor` | (minikube) enable the gvisor addon if it isn't already |
+| `make down` | Delete the kind cluster (kind) / `minikube stop` (minikube — deleting the profile is left manual) |
 | `make clean` | `down` + remove the locally built images |
+
+Every target accepts `PLATFORM=minikube` (kind is the default).
 
 Chart install order doesn't matter — both charts install independently
 against a cluster with no prior state (`webapp`'s Pods will just retry

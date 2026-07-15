@@ -7,6 +7,12 @@ image:
 
 replicaCount: 1
 
+# RuntimeClass for the webapp Pods. Set to "gvisor" (the RuntimeClass the
+# minikube gvisor addon installs) to sandbox the app with runsc; empty
+# uses the cluster's default runtime. The Makefile sets this automatically
+# for `PLATFORM=minikube`.
+runtimeClassName: ""
+
 service:
   type: ClusterIP
   port: 3000

@@ -218,7 +218,8 @@ func (r *QueueWorkerReconciler) createWorkerJob(ctx context.Context, qw *serverl
 					},
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
+					RestartPolicy:    corev1.RestartPolicyNever,
+					RuntimeClassName: runtimeClassNameOrNil(qw.Spec.Worker.RuntimeClassName),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &runAsNonRoot,
 						RunAsUser:    &runAsUser,
@@ -263,6 +264,15 @@ func (r *QueueWorkerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func isBusyGroupErr(err error) bool {
 	return err != nil && len(err.Error()) >= 9 && err.Error()[:9] == "BUSYGROUP"
+}
+
+// runtimeClassNameOrNil maps the CRD's plain-string field onto PodSpec's
+// *string: empty string means "cluster default runtime", i.e. leave nil.
+func runtimeClassNameOrNil(name string) *string {
+	if name == "" {
+		return nil
+	}
+	return &name
 }
 
 func minInt64(a, b int64) int64 {

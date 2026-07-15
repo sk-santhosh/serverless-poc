@@ -213,6 +213,12 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
+                  runtimeClassName:
+                    description: |-
+                      RuntimeClassName selects the RuntimeClass for worker Pods (e.g.
+                      "gvisor" to sandbox workers with runsc). Empty means the cluster's
+                      default runtime.
+                    type: string
                 required:
                 - image
                 type: object
